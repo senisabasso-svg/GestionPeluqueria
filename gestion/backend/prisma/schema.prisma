@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Centro / salón (multi-tenant). Nombre de tabla `second_hands` conservado por compatibilidad.
+model Peluqueria {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  logoUrl   String?  @map("logo_url")
+
+  usuarios              Usuario[]
+  proveedores           Proveedor[]
+  productos             Producto[]
+  ventas                Venta[]
+  ventaItems            VentaItem[]
+  salonCategorias       SalonCategoria[]
+  salonCategoriaItems   SalonCategoriaItem[]
+  clientes              Cliente[]
+
+  @@map("second_hands")
+}
+
+/// Clientes del salón (obligatorio asociar a cada venta nueva).
+model Cliente {
+  id           Int     @id @default(autoincrement())
+  idPeluqueria Int     @map("id_second")
+  nombre       String
+  telefono     String?
+  email        String?
+  notas        String?
+
+  peluqueria Peluqueria @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  ventas     Venta[]
+
+  @@index([idPeluqueria])
+  @@map("clientes")
+}
+
+model Usuario {
+  id             Int     @id @default(autoincrement())
+  idPeluqueria   Int?    @map("id_second")
+  email          String  @unique
+  passwordHash   String  @map("password_hash")
+  nombre         String?
+  rol            String
+
+  peluqueria Peluqueria? @relation(fields: [idPeluqueria], references: [id], onDelete: SetNull)
+
+  @@map("usuarios")
+}
+
+model Proveedor {
+  id            Int     @id @default(autoincrement())
+  idPeluqueria  Int     @map("id_second")
+  nombre        String
+  telefono      String?
+  email         String?
+
+  peluqueria Peluqueria @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  productos  Producto[]
+
+  @@index([idPeluqueria])
+  @@map("proveedores")
+}
+
+/// Artículos de inventario (cremas, insumos, etc.).
+model Producto {
+  id            Int     @id @default(autoincrement())
+  idPeluqueria  Int     @map("id_second")
+  descripcion   String
+  categoria     String? @map("tipo_prenda")
+  marca         String?
+  color         String?
+  notas         String? @map("condicion")
+  precioVenta   Float   @map("precio_venta")
+  codigo        String? @map("talle")
+  idProveedor   Int     @map("id_proveedor")
+  estado        String  @default("disponible")
+
+  peluqueria            Peluqueria            @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  proveedor             Proveedor             @relation(fields: [idProveedor], references: [id])
+  ventaItems            VentaItem[]
+  salonCategoriaItems SalonCategoriaItem[]
+
+  @@index([idPeluqueria])
+  @@map("productos")
+}
+
+model Venta {
+  id           Int      @id @default(autoincrement())
+  idPeluqueria Int      @map("id_second")
+  idCliente    Int?     @map("id_cliente")
+  fecha        DateTime @default(now())
+  total        Float
+
+  peluqueria Peluqueria @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  cliente    Cliente?   @relation(fields: [idCliente], references: [id], onDelete: SetNull)
+  items      VentaItem[]
+
+  @@index([idPeluqueria])
+  @@index([idCliente])
+  @@map("ventas")
+}
+
+model VentaItem {
+  id               Int     @id @default(autoincrement())
+  idPeluqueria     Int     @map("id_second")
+  idVenta          Int     @map("id_venta")
+  idProducto       Int?    @map("id_producto")
+  descripcionLinea String? @map("descripcion_linea")
+  tipoLinea        String  @default("producto") @map("tipo_linea")
+  precioUnitario   Float   @map("precio_unitario")
+
+  peluqueria Peluqueria @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  venta      Venta      @relation(fields: [idVenta], references: [id], onDelete: Cascade)
+  producto   Producto?  @relation(fields: [idProducto], references: [id])
+
+  @@index([idPeluqueria])
+  @@map("venta_items")
+}
+
+/// Categoría de tarifario (ej. "Cortes dama").
+model SalonCategoria {
+  id           Int    @id @default(autoincrement())
+  idPeluqueria Int    @map("id_second")
+  nombre       String
+  orden        Int    @default(0)
+
+  peluqueria Peluqueria           @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  items      SalonCategoriaItem[]
+
+  @@index([idPeluqueria])
+  @@map("salon_categorias")
+}
+
+/// Ítem de tarifario: servicio (solo nombre+precio) o producto de inventario con precio en mostrador.
+model SalonCategoriaItem {
+  id            Int     @id @default(autoincrement())
+  idPeluqueria  Int     @map("id_second")
+  idCategoria   Int     @map("id_categoria")
+  tipo          String
+  nombre        String
+  precio        Float
+  idProducto    Int?    @map("id_producto")
+
+  peluqueria Peluqueria     @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  categoria  SalonCategoria @relation(fields: [idCategoria], references: [id], onDelete: Cascade)
+  producto   Producto?      @relation(fields: [idProducto], references: [id], onDelete: SetNull)
+
+  @@index([idPeluqueria])
+  @@index([idCategoria])
+  @@map("salon_categoria_items")
+}

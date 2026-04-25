@@ -1,0 +1,26 @@
+# Dependencias y artefactos de build
+node_modules/
+**/node_modules/
+dist/
+build/
+.vite/
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Logs y cachés
+*.log
+npm-debug.log*
+.cache/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Prisma / bases locales (ajusta si versionas migraciones)
+*.db
+*.db-journal

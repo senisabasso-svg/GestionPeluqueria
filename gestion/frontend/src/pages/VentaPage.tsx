@@ -73,6 +73,8 @@ export default function VentaPage() {
   const [filtroTexto, setFiltroTexto] = useState("");
   const [filtroId, setFiltroId] = useState<string>("");
   const [filtroProveedor, setFiltroProveedor] = useState<string>("");
+  const [categoriaTarifarioSel, setCategoriaTarifarioSel] = useState<string>("");
+  const [busquedaServicio, setBusquedaServicio] = useState("");
   const [clientes, setClientes] = useState<ClienteRes[]>([]);
   const [idCliente, setIdCliente] = useState<string>("");
 
@@ -118,6 +120,21 @@ export default function VentaPage() {
     }
     return list;
   }, [disponibles, filtroTexto, filtroId, filtroProveedor]);
+
+  const categoriasFiltradasTarifario = useMemo(() => {
+    const q = busquedaServicio.trim().toLowerCase();
+    if (q) {
+      return categorias
+        .map((cat) => ({
+          ...cat,
+          items: cat.items.filter((it) => it.nombre.toLowerCase().includes(q)),
+        }))
+        .filter((cat) => cat.items.length > 0);
+    }
+    if (!categoriaTarifarioSel) return categorias;
+    const idSel = Number(categoriaTarifarioSel);
+    return categorias.filter((cat) => cat.id === idSel);
+  }, [categorias, busquedaServicio, categoriaTarifarioSel]);
 
   const addProductoInventario = (p: Producto) => {
     setCart((c) => [
@@ -268,139 +285,167 @@ export default function VentaPage() {
 
   return (
     <div className="page venta-grid">
-      <section className="card">
-        <h2>Tarifario (por categoría)</h2>
-        <p className="muted" style={{ marginBottom: "0.75rem", fontSize: "0.9rem" }}>
-          Líneas configuradas en <strong>Tarifario</strong>. Servicios no descuentan stock; productos vinculados sí.
-        </p>
-        {loading ? (
-          <p>{"Cargando" + ELLIPSIS}</p>
-        ) : categorias.length === 0 ? (
-          <p className="muted">No hay categorías todavía. Créelas en la pestaña Tarifario.</p>
-        ) : (
-          categorias.map((cat) => (
-            <div key={cat.id} style={{ marginBottom: "1.25rem" }}>
-              <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.05rem" }}>{cat.nombre}</h3>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Ítem</th>
-                      <th>Tipo</th>
-                      <th>Precio</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cat.items.map((it) => (
-                      <tr key={it.id}>
-                        <td>{it.nombre}</td>
-                        <td>{it.tipo === "producto" ? "Producto" : "Servicio"}</td>
-                        <td>${it.precio.toFixed(2)}</td>
-                        <td>
-                          <button type="button" className="btn btn-primary" onClick={() => addFromTarifario(it)}>
-                            Al cobro
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {cat.items.length === 0 && <p className="muted">Sin ítems en esta categoría.</p>}
-              </div>
-            </div>
-          ))
-        )}
-      </section>
-
-      <section className="card">
-        <h2>Inventario disponible</h2>
-        <div className="form-grid form-grid--venta-filters" style={{ marginBottom: "0.5rem" }}>
-          <label>
-            <span className="muted" style={{ fontSize: 12 }}>
-              Buscar por descripción
-            </span>
-            <input
-              type="text"
-              placeholder="Ej: tinte, champú…"
-              value={filtroTexto}
-              onChange={(e) => setFiltroTexto(e.target.value)}
-            />
-          </label>
-          <label>
-            <span className="muted" style={{ fontSize: 12 }}>
-              Buscar por ID
-            </span>
-            <input
-              type="number"
-              min="1"
-              inputMode="numeric"
-              placeholder="ID"
-              value={filtroId}
-              onChange={(e) => setFiltroId(e.target.value)}
-            />
-          </label>
-          <label>
-            <span className="muted" style={{ fontSize: 12 }}>
-              Filtrar por proveedor
-            </span>
-            <select value={filtroProveedor} onChange={(e) => setFiltroProveedor(e.target.value)}>
-              <option value="">Todos</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {loading ? (
-          <p>{"Cargando" + ELLIPSIS}</p>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>{T.descripcion}</th>
-                  <th>Categoría</th>
-                  <th>Marca</th>
-                  <th>Color</th>
-                  <th>Código</th>
-                  <th>Precio</th>
-                  <th>Proveedor</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {disponiblesFiltrados.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td>{p.descripcion}</td>
-                    <td>{p.categoria ?? EM}</td>
-                    <td>{p.marca ?? EM}</td>
-                    <td>{p.color ?? EM}</td>
-                    <td>{p.codigo ?? EM}</td>
-                    <td>${p.precioVenta.toFixed(2)}</td>
-                    <td>{p.nombreProveedor ?? EM}</td>
-                    <td>
-                      <button type="button" className="btn btn-primary" onClick={() => addProductoInventario(p)}>
-                        Al cobro
-                      </button>
-                    </td>
-                  </tr>
+      <div className="venta-left-col">
+        <section className="card">
+          <h2>Tarifario (por categoría)</h2>
+          <p className="muted" style={{ marginBottom: "0.75rem", fontSize: "0.9rem" }}>
+            Líneas configuradas en <strong>Tarifario</strong>. Servicios no descuentan stock; productos vinculados sí.
+          </p>
+          <div className="form-grid" style={{ marginBottom: "0.75rem" }}>
+            <label>
+              Buscar servicio/ítem por nombre (todas las categorías)
+              <input
+                value={busquedaServicio}
+                onChange={(e) => setBusquedaServicio(e.target.value)}
+                placeholder="Ej. corte, balayage, manicura..."
+              />
+            </label>
+            <label>
+              Mostrar categoría
+              <select
+                value={categoriaTarifarioSel}
+                onChange={(e) => setCategoriaTarifarioSel(e.target.value)}
+                disabled={busquedaServicio.trim().length > 0}
+              >
+                <option value="">Todas</option>
+                {categorias.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nombre}
+                  </option>
                 ))}
-              </tbody>
-            </table>
-            {disponibles.length === 0 && !loading && <p className="muted">No hay unidades disponibles en inventario.</p>}
+              </select>
+            </label>
           </div>
-        )}
-        <button type="button" className="btn btn-secondary mt" onClick={load}>
-          Actualizar listas
-        </button>
-      </section>
+          {loading ? (
+            <p>{"Cargando" + ELLIPSIS}</p>
+          ) : categorias.length === 0 ? (
+            <p className="muted">No hay categorías todavía. Créelas en la pestaña Tarifario.</p>
+          ) : categoriasFiltradasTarifario.length === 0 ? (
+            <p className="muted">No hay ítems que coincidan con esa búsqueda.</p>
+          ) : (
+            categoriasFiltradasTarifario.map((cat) => (
+              <div key={cat.id} style={{ marginBottom: "1.25rem" }}>
+                <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.05rem" }}>{cat.nombre}</h3>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ítem</th>
+                        <th>Tipo</th>
+                        <th>Precio</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cat.items.map((it) => (
+                        <tr key={it.id}>
+                          <td>{it.nombre}</td>
+                          <td>{it.tipo === "producto" ? "Producto" : "Servicio"}</td>
+                          <td>${it.precio.toFixed(2)}</td>
+                          <td>
+                            <button type="button" className="btn btn-primary" onClick={() => addFromTarifario(it)}>
+                              Al cobro
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {cat.items.length === 0 && <p className="muted">Sin ítems en esta categoría.</p>}
+                </div>
+              </div>
+            ))
+          )}
+        </section>
 
-      <section className="card">
+        <section className="card">
+          <h2>Inventario disponible</h2>
+          <div className="form-grid form-grid--venta-filters" style={{ marginBottom: "0.5rem" }}>
+            <label>
+              <span className="muted" style={{ fontSize: 12 }}>
+                Buscar por descripción
+              </span>
+              <input
+                type="text"
+                placeholder="Ej: tinte, champú…"
+                value={filtroTexto}
+                onChange={(e) => setFiltroTexto(e.target.value)}
+              />
+            </label>
+            <label>
+              <span className="muted" style={{ fontSize: 12 }}>
+                Buscar por ID
+              </span>
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                placeholder="ID"
+                value={filtroId}
+                onChange={(e) => setFiltroId(e.target.value)}
+              />
+            </label>
+            <label>
+              <span className="muted" style={{ fontSize: 12 }}>
+                Filtrar por proveedor
+              </span>
+              <select value={filtroProveedor} onChange={(e) => setFiltroProveedor(e.target.value)}>
+                <option value="">Todos</option>
+                {proveedores.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {loading ? (
+            <p>{"Cargando" + ELLIPSIS}</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>{T.descripcion}</th>
+                    <th>Categoría</th>
+                    <th>Marca</th>
+                    <th>Color</th>
+                    <th>Código</th>
+                    <th>Precio</th>
+                    <th>Proveedor</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {disponiblesFiltrados.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.id}</td>
+                      <td>{p.descripcion}</td>
+                      <td>{p.categoria ?? EM}</td>
+                      <td>{p.marca ?? EM}</td>
+                      <td>{p.color ?? EM}</td>
+                      <td>{p.codigo ?? EM}</td>
+                      <td>${p.precioVenta.toFixed(2)}</td>
+                      <td>{p.nombreProveedor ?? EM}</td>
+                      <td>
+                        <button type="button" className="btn btn-primary" onClick={() => addProductoInventario(p)}>
+                          Al cobro
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {disponibles.length === 0 && !loading && <p className="muted">No hay unidades disponibles en inventario.</p>}
+            </div>
+          )}
+          <button type="button" className="btn btn-secondary mt" onClick={load}>
+            Actualizar listas
+          </button>
+        </section>
+      </div>
+      <section className="card venta-cobro-sticky">
         <h2>Cobro actual</h2>
         <label style={{ display: "block", marginBottom: "0.75rem", maxWidth: 420 }}>
           <span className="muted" style={{ fontSize: "0.9rem", display: "block", marginBottom: 4 }}>
@@ -429,7 +474,7 @@ export default function VentaPage() {
             </Link>
           </p>
         )}
-        <div className="table-wrap">
+        <div className="table-wrap table-wrap--cobro">
           <table>
             <thead>
               <tr>

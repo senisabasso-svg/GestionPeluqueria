@@ -18,6 +18,11 @@ type SalonCategoria = {
 };
 
 type ProductoOpt = { id: number; descripcion: string; precioVenta: number; estado: string };
+type BootstrapCatalogResponse = {
+  ok: boolean;
+  created: { categorias: number; items: number };
+  message: string;
+};
 
 export default function TarifarioPage() {
   const [categorias, setCategorias] = useState<SalonCategoria[]>([]);
@@ -92,6 +97,18 @@ export default function TarifarioPage() {
     }
   };
 
+  const cargarCatalogoUy = async () => {
+    if (!confirm("¿Cargar catálogo base de peluquería para Uruguay? Se agregarán categorías y servicios faltantes.")) return;
+    setMsg(null);
+    try {
+      const resp = await api<BootstrapCatalogResponse>("/api/salon-categorias/bootstrap-uy", { method: "POST" });
+      await load();
+      setMsg(resp.message);
+    } catch (e) {
+      setMsg(String(e));
+    }
+  };
+
   return (
     <div className="page">
       <section className="card">
@@ -116,6 +133,11 @@ export default function TarifarioPage() {
             </button>
           </div>
         </form>
+        <div className="form-actions" style={{ marginTop: "0.5rem" }}>
+          <button type="button" className="btn btn-secondary" onClick={cargarCatalogoUy}>
+            Cargar catálogo completo Uruguay
+          </button>
+        </div>
         {msg && (
           <p className={/creada|actualizada|eliminada|añadido|Ítem/i.test(msg) ? "ok" : "err"}>{msg}</p>
         )}

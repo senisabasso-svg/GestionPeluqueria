@@ -2,8 +2,19 @@
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import TenantParallaxDecor from "../components/TenantParallaxDecor";
+import type { PublicacionRow } from "./InformacionPage";
 
 type PeluqueriaRow = { id: number; nombre: string; activo: boolean; createdAt: string; logoUrl: string | null };
+
+const MAX_FILE_BYTES = 1_800_000;
+
+const TIPO_OPTIONS = [
+  { value: "general", label: "General" },
+  { value: "novedad", label: "Novedad" },
+  { value: "aviso", label: "Aviso" },
+  { value: "promocion", label: "Promoción" },
+  { value: "evento", label: "Evento" },
+] as const;
 
 export default function SuperadminPage() {
   const { usuario, logout } = useAuth();
@@ -22,6 +33,23 @@ export default function SuperadminPage() {
     rol: "admin" as "admin" | "operador",
   });
 
+  const [publicaciones, setPublicaciones] = useState<PublicacionRow[]>([]);
+  const [pubTitulo, setPubTitulo] = useState("");
+  const [pubSubtitulo, setPubSubtitulo] = useState("");
+  const [pubTipo, setPubTipo] = useState<(typeof TIPO_OPTIONS)[number]["value"]>("general");
+  const [pubImagenUrl, setPubImagenUrl] = useState("");
+  const [pubFileData, setPubFileData] = useState<string | null>(null);
+  const [pubMsg, setPubMsg] = useState<string | null>(null);
+  const [pubSaving, setPubSaving] = useState(false);
+
+  const loadPublicaciones = useCallback(async () => {
+    try {
+      setPublicaciones(await api<PublicacionRow[]>("/api/super/publicaciones"));
+    } catch (e) {
+      setPubMsg(String(e));
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       setPeluquerias(await api<PeluqueriaRow[]>("/api/super/peluquerias"));
@@ -32,7 +60,79 @@ export default function SuperadminPage() {
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadPublicaciones();
+  }, [load, loadPublicaciones]);
+
+  const onPubFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      setPubMsg("Seleccione un archivo de imagen (JPG, PNG, WebP…).");
+      setPubFileData(null);
+      return;
+    }
+    if (f.size > MAX_FILE_BYTES) {
+      setPubMsg("La imagen supera ~1,7 MB. Reduzca tamaño o use una URL.");
+      setPubFileData(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const r = reader.result;
+      if (typeof r === "string") setPubFileData(r);
+    };
+    reader.readAsDataURL(f);
+    setPubMsg(null);
+  };
+
+  const crearPublicacion = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setPubMsg(null);
+    const imagenUrl = (pubFileData || pubImagenUrl.trim()) || "";
+    if (!pubTitulo.trim()) {
+      setPubMsg("El título es obligatorio.");
+      return;
+    }
+    if (!imagenUrl) {
+      setPubMsg("Suba una imagen o pegue una URL de imagen.");
+      return;
+    }
+    setPubSaving(true);
+    try {
+      await api("/api/super/publicaciones", {
+        method: "POST",
+        body: JSON.stringify({
+          titulo: pubTitulo.trim(),
+          subtitulo: pubSubtitulo.trim() || null,
+          tipo: pubTipo,
+          imagenUrl,
+        }),
+      });
+      setPubTitulo("");
+      setPubSubtitulo("");
+      setPubTipo("general");
+      setPubImagenUrl("");
+      setPubFileData(null);
+      await loadPublicaciones();
+      setPubMsg("Publicación creada. Visible en la pestaña Información de cada salón.");
+    } catch (e) {
+      setPubMsg(String(e));
+    } finally {
+      setPubSaving(false);
+    }
+  };
+
+  const eliminarPublicacion = async (id: number) => {
+    if (!window.confirm("¿Eliminar esta publicación en todos los salones?")) return;
+    setPubMsg(null);
+    try {
+      await api(`/api/super/publicaciones/${id}`, { method: "DELETE" });
+      await loadPublicaciones();
+    } catch (e) {
+      setPubMsg(String(e));
+    }
+  };
 
   const crearPeluqueria = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +226,106 @@ export default function SuperadminPage() {
       </header>
       <main className="main">
         <section className="card">
+          <h2>Publicaciones para todos los salones</h2>
+          <p className="muted">
+            Aparecen en la pestaña <strong>Información</strong> de cada peluquería: título, tipo, subtítulo opcional e imagen
+            (archivo o URL).
+          </p>
+          <form className="form-grid superadmin-pub-form" onSubmit={crearPublicacion}>
+            <label className="superadmin-pub-form__full">
+              Título *
+              <input value={pubTitulo} onChange={(e) => setPubTitulo(e.target.value)} required placeholder="Ej. Horario especial enero" />
+            </label>
+            <label>
+              Tipo *
+              <select value={pubTipo} onChange={(e) => setPubTipo(e.target.value as (typeof TIPO_OPTIONS)[number]["value"])}>
+                {TIPO_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="superadmin-pub-form__full">
+              Subtítulo (opcional)
+              <textarea
+                value={pubSubtitulo}
+                onChange={(e) => setPubSubtitulo(e.target.value)}
+                rows={2}
+                placeholder="Texto breve debajo del título"
+              />
+            </label>
+            <label className="superadmin-pub-form__full">
+              Imagen — archivo
+              <input type="file" accept="image/*" onChange={onPubFile} />
+            </label>
+            <label className="superadmin-pub-form__full">
+              O URL de imagen (si no sube archivo)
+              <input
+                value={pubImagenUrl}
+                onChange={(e) => setPubImagenUrl(e.target.value)}
+                placeholder="https://… o /ruta/local.png"
+                disabled={Boolean(pubFileData)}
+              />
+            </label>
+            {(pubFileData || pubImagenUrl.trim()) && (
+              <div className="superadmin-pub-preview superadmin-pub-form__full">
+                <strong>Vista previa</strong>
+                <img src={pubFileData || pubImagenUrl.trim()} alt="" />
+              </div>
+            )}
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={pubSaving}>
+                {pubSaving ? "Publicando…" : "Publicar"}
+              </button>
+              {pubFileData ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setPubFileData(null);
+                  }}
+                >
+                  Quitar archivo
+                </button>
+              ) : null}
+            </div>
+          </form>
+          {pubMsg && (
+            <p className={pubMsg.includes("creada") || pubMsg.includes("Visible") ? "ok" : "err"} style={{ marginTop: "0.75rem" }}>
+              {pubMsg}
+            </p>
+          )}
+          <div className="superadmin-pub-list mt-lg">
+            <h3 style={{ margin: "0 0 0.5rem", fontSize: "1rem" }}>Publicadas</h3>
+            {publicaciones.length === 0 ? (
+              <p className="muted">Ninguna todavía.</p>
+            ) : (
+              <ul className="superadmin-pub-items">
+                {publicaciones.map((p) => (
+                  <li key={p.id} className="superadmin-pub-item">
+                    <img src={p.imagenUrl} alt="" />
+                    <div className="superadmin-pub-item__text">
+                      <span className={`informacion-badge informacion-badge--${p.tipo}`}>
+                        {TIPO_OPTIONS.find((t) => t.value === p.tipo)?.label ?? p.tipo}
+                      </span>
+                      <strong>{p.titulo}</strong>
+                      {p.subtitulo ? <span className="muted">{p.subtitulo}</span> : null}
+                      <span className="muted" style={{ fontSize: "0.8rem" }}>
+                        {new Date(p.createdAt).toLocaleString("es")}
+                      </span>
+                    </div>
+                    <button type="button" className="btn btn-secondary" onClick={() => eliminarPublicacion(p.id)}>
+                      Eliminar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card mt-lg">
           <h2>Nueva peluquería</h2>
           <p className="muted">
             Cada salón recibe un <strong>ID único</strong>. Inventario, ventas, tarifario y proveedores quedan vinculados

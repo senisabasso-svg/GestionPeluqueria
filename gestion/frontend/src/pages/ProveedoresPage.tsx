@@ -17,16 +17,16 @@ export default function ProveedoresPage() {
       setRows(await api<Proveedor[]>("/api/proveedores"));
     } catch (e) {
       setMsg(String(e));
-    } finally {
+    } finally { 
       setLoading(false);
-    } 
+    }
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => { 
     e.preventDefault();
     setMsg(null);
     if (!form.nombre.trim()) {

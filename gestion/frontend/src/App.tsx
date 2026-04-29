@@ -8,9 +8,12 @@ import ProveedoresPage from "./pages/ProveedoresPage";
 import InformesPage from "./pages/InformesPage";
 import TarifarioPage from "./pages/TarifarioPage";
 import ClientesPage from "./pages/ClientesPage";
+import TurnosPage from "./pages/TurnosPage";
+import InformacionPage from "./pages/InformacionPage";
 import LoginPage from "./pages/LoginPage";
 import SuperadminPage from "./pages/SuperadminPage";
 import TenantParallaxDecor from "./components/TenantParallaxDecor";
+import NavConfiguraciones from "./components/NavConfiguraciones";
 
 function TenantLayout() {
   const { usuario, logout } = useAuth();
@@ -35,20 +38,15 @@ function TenantLayout() {
           <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
             Cobro
           </NavLink>
-          <NavLink to="/productos" className={({ isActive }) => (isActive ? "active" : "")}>
-            Inventario
-          </NavLink>
-          <NavLink to="/tarifario" className={({ isActive }) => (isActive ? "active" : "")}>
-            Tarifario
-          </NavLink>
-          <NavLink to="/proveedores" className={({ isActive }) => (isActive ? "active" : "")}>
-            Proveedores
-          </NavLink>
-          <NavLink to="/clientes" className={({ isActive }) => (isActive ? "active" : "")}>
-            Clientes
+          <NavConfiguraciones />
+          <NavLink to="/turnos" className={({ isActive }) => (isActive ? "active" : "")}>
+            Turnos
           </NavLink>
           <NavLink to="/informes" className={({ isActive }) => (isActive ? "active" : "")}>
             Informes
+          </NavLink>
+          <NavLink to="/informacion" className={({ isActive }) => (isActive ? "active" : "")}>
+            Información
           </NavLink>
         </nav>
         <div className="header-actions">
@@ -153,7 +151,9 @@ export default function App() {
           <Route path="/tarifario" element={<TarifarioPage />} />
           <Route path="/proveedores" element={<ProveedoresPage />} />
           <Route path="/clientes" element={<ClientesPage />} />
+          <Route path="/turnos" element={<TurnosPage />} />
           <Route path="/informes" element={<InformesPage />} />
+          <Route path="/informacion" element={<InformacionPage />} />
         </Route>
       </Route>
 

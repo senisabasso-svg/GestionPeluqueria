@@ -23,6 +23,7 @@ model Peluqueria {
   salonCategorias       SalonCategoria[]
   salonCategoriaItems   SalonCategoriaItem[]
   clientes              Cliente[]
+  turnos                Turno[]
 
   @@map("second_hands")
 }
@@ -38,6 +39,7 @@ model Cliente {
 
   peluqueria Peluqueria @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
   ventas     Venta[]
+  turnos    Turno[]
 
   @@index([idPeluqueria])
   @@map("clientes")
@@ -153,8 +155,43 @@ model SalonCategoriaItem {
   peluqueria Peluqueria     @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
   categoria  SalonCategoria @relation(fields: [idCategoria], references: [id], onDelete: Cascade)
   producto   Producto?      @relation(fields: [idProducto], references: [id], onDelete: SetNull)
+  turnos     Turno[]
 
   @@index([idPeluqueria])
   @@index([idCategoria])
   @@map("salon_categoria_items")
+}
+
+/// Turnos agendados del salón para servicios cargados en tarifario.
+model Turno {
+  id               Int      @id @default(autoincrement())
+  idPeluqueria     Int      @map("id_second")
+  idCliente        Int      @map("id_cliente")
+  idSalonItem      Int      @map("id_salon_item")
+  fechaHora        DateTime @map("fecha_hora")
+  estado           String   @default("pendiente")
+  notas            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  peluqueria Peluqueria         @relation(fields: [idPeluqueria], references: [id], onDelete: Cascade)
+  cliente    Cliente            @relation(fields: [idCliente], references: [id], onDelete: Cascade)
+  salonItem  SalonCategoriaItem @relation(fields: [idSalonItem], references: [id], onDelete: Cascade)
+
+  @@index([idPeluqueria, fechaHora])
+  @@index([idCliente])
+  @@index([idSalonItem])
+  @@map("turnos")
+}
+
+/// Avisos del superadmin visibles en todas las peluquerías (pestaña Información).
+model PublicacionGlobal {
+  id         Int      @id @default(autoincrement())
+  titulo     String
+  subtitulo  String?
+  tipo       String   @default("general")
+  imagenUrl  String   @map("imagen_url")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("publicaciones_globales")
 }

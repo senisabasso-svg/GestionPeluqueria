@@ -19,6 +19,7 @@ export default function ClientesPage() {
   const [form, setForm] = useState({ nombre: "", telefono: "", email: "", notas: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({ nombre: "", telefono: "", email: "", notas: "" });
+  const [queryNombre, setQueryNombre] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +101,16 @@ export default function ClientesPage() {
     }
   };
 
+  const normalizarTelefonoUy = (telefono: string) => {
+    const digits = telefono.replace(/\D/g, "");
+    if (!digits) return null;
+    if (digits.startsWith("598")) return digits;
+    if (digits.startsWith("0")) return `598${digits.slice(1)}`;
+    return `598${digits}`;
+  };
+
+  const clientesFiltrados = rows.filter((r) => r.nombre.toLowerCase().includes(queryNombre.trim().toLowerCase()));
+
   return (
     <div className="page">
       <section className="card">
@@ -135,6 +146,16 @@ export default function ClientesPage() {
 
       <section className="card mt-lg">
         <h2>Clientes</h2>
+        <div style={{ maxWidth: 420, marginBottom: "0.75rem" }}>
+          <label>
+            Buscar por nombre
+            <input
+              value={queryNombre}
+              onChange={(e) => setQueryNombre(e.target.value)}
+              placeholder="Ej. María, Juan, Pérez…"
+            />
+          </label>
+        </div>
         {loading ? (
           <p>Cargando{"\u2026"}</p>
         ) : (
@@ -147,11 +168,12 @@ export default function ClientesPage() {
                   <th>Teléfono</th>
                   <th>Email</th>
                   <th>Notas</th>
+                  <th>WhatsApp</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) =>
+                {clientesFiltrados.map((r) =>
                   editingId === r.id ? (
                     <tr key={r.id}>
                       <td>{r.id}</td>
@@ -182,6 +204,20 @@ export default function ClientesPage() {
                         />
                       </td>
                       <td>
+                        {r.telefono ? (
+                          <a
+                            href={`https://wa.me/${normalizarTelefonoUy(r.telefono)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-ghost"
+                          >
+                            Abrir
+                          </a>
+                        ) : (
+                          EM
+                        )}
+                      </td>
+                      <td>
                         <button type="button" className="btn btn-primary" onClick={() => saveEdit(r.id)}>
                           Guardar
                         </button>{" "}
@@ -198,6 +234,20 @@ export default function ClientesPage() {
                       <td>{r.email ?? EM}</td>
                       <td>{r.notas ?? EM}</td>
                       <td>
+                        {r.telefono ? (
+                          <a
+                            href={`https://wa.me/${normalizarTelefonoUy(r.telefono)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-ghost"
+                          >
+                            WhatsApp
+                          </a>
+                        ) : (
+                          EM
+                        )}
+                      </td>
+                      <td>
                         <button type="button" className="btn btn-secondary" onClick={() => startEdit(r)}>
                           Editar
                         </button>
@@ -207,6 +257,7 @@ export default function ClientesPage() {
                 )}
               </tbody>
             </table>
+            {!loading && clientesFiltrados.length === 0 ? <p className="muted">No hay clientes para esa búsqueda.</p> : null}
           </div>
         )}
         <button type="button" className="btn btn-secondary mt" onClick={load}>

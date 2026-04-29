@@ -73,7 +73,7 @@ export default function LoginPage() {
       const u = JSON.parse(localStorage.getItem(USER_KEY) || "{}") as { rol?: string };
       navigate(u.rol === "superadmin" ? "/super" : "/", { replace: true });
     } catch (err) {
-      setError(String(err));
+      setError(String(err)); 
     } finally {
       setSending(false);
     }

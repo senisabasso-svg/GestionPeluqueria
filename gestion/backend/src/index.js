@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || "cambiar-en-produccion";
 
 app.use(cors({ origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim()) : true, credentials: true }));
-app.use(express.json());
+/* Límite mayor que el default (~100kb): publicaciones con imagen en base64 en JSON. */
+app.use(express.json({ limit: "12mb" }));
 
 function tenantIdFromUser(user) {
   if (!user) return null;
@@ -102,6 +103,170 @@ function mapInformeVentaItem(vi) {
     telefonoCliente: c?.telefono ?? null,
   };
 }
+
+const CATALOGO_BASE_UY = [
+  {
+    nombre: "Cortes dama",
+    items: [
+      ["Corte clásico dama", 750],
+      ["Corte con brushing", 980],
+      ["Corte en capas", 920],
+      ["Corte bob", 960],
+      ["Corte pixie", 900],
+      ["Flequillo", 420],
+      ["Corte de puntas", 520],
+    ],
+  },
+  {
+    nombre: "Cortes caballero",
+    items: [
+      ["Corte clásico caballero", 650],
+      ["Corte degradé / fade", 780],
+      ["Corte máquina completo", 520],
+      ["Corte + lavado", 820],
+      ["Diseño de líneas", 260],
+      ["Perfilado de cejas", 250],
+    ],
+  },
+  {
+    nombre: "Niños y teens",
+    items: [
+      ["Corte niño", 560],
+      ["Corte niña", 620],
+      ["Primer corte (bebé)", 680],
+      ["Corte teens", 700],
+    ],
+  },
+  {
+    nombre: "Barbería",
+    items: [
+      ["Arreglo de barba", 540],
+      ["Perfilado de barba", 420],
+      ["Afeitado tradicional", 620],
+      ["Combo corte + barba", 1100],
+      ["Toallas calientes", 180],
+    ],
+  },
+  {
+    nombre: "Lavado y peinado",
+    items: [
+      ["Lavado simple", 320],
+      ["Brushing corto", 520],
+      ["Brushing medio", 650],
+      ["Brushing largo", 780],
+      ["Planchita", 420],
+      ["Ondas / bucles", 550],
+      ["Peinado social", 1200],
+      ["Peinado de novia (prueba)", 2800],
+      ["Peinado de novia (evento)", 3600],
+      ["Recogido", 1400],
+    ],
+  },
+  {
+    nombre: "Coloración",
+    items: [
+      ["Retoque de raíz", 1500],
+      ["Color global corto", 1700],
+      ["Color global medio", 2100],
+      ["Color global largo", 2500],
+      ["Baño de color", 1150],
+      ["Tonalización", 980],
+      ["Matización", 920],
+      ["Corrección de color", 2900],
+      ["Color fantasía", 3200],
+    ],
+  },
+  {
+    nombre: "Mechas y balayage",
+    items: [
+      ["Mechas gorra", 1700],
+      ["Mechas papel corto", 2100],
+      ["Mechas papel largo", 2800],
+      ["Balayage medio", 3600],
+      ["Balayage largo", 4300],
+      ["Babylights", 3000],
+      ["Money piece", 1200],
+      ["Decoloración global", 3600],
+    ],
+  },
+  {
+    nombre: "Tratamientos capilares",
+    items: [
+      ["Hidratación profunda", 1200],
+      ["Nutrición capilar", 1200],
+      ["Reconstrucción capilar", 1450],
+      ["Botox capilar", 2200],
+      ["Alisado corto", 2500],
+      ["Alisado medio", 3200],
+      ["Alisado largo", 3900],
+      ["Keratina corto", 2200],
+      ["Keratina largo", 3100],
+      ["Detox capilar", 1300],
+    ],
+  },
+  {
+    nombre: "Manicura",
+    items: [
+      ["Manicura básica", 700],
+      ["Manicura express", 500],
+      ["Esmaltado tradicional", 580],
+      ["Esmaltado semipermanente", 950],
+      ["Kapping gel", 1200],
+      ["Soft gel", 1550],
+      ["Esculpidas gel", 1850],
+      ["Esculpidas acrílico", 2050],
+      ["Relleno", 1300],
+      ["Nail art básico", 350],
+      ["Nail art avanzado", 700],
+      ["Retiro de semipermanente", 420],
+      ["Retiro de esculpidas", 650],
+      ["Spa de manos", 900],
+      ["Parafina manos", 750],
+    ],
+  },
+  {
+    nombre: "Pedicuría",
+    items: [
+      ["Pedicura estética", 950],
+      ["Pedicura spa", 1400],
+      ["Esmaltado semipermanente pies", 980],
+      ["Retiro semipermanente pies", 420],
+      ["Belleza de pies express", 700],
+      ["Parafina pies", 850],
+    ],
+  },
+  {
+    nombre: "Depilación facial",
+    items: [
+      ["Bozo", 280],
+      ["Mentón", 280],
+      ["Patillas", 350],
+      ["Cejas diseño", 400],
+      ["Rostro completo", 980],
+    ],
+  },
+  {
+    nombre: "Maquillaje",
+    items: [
+      ["Maquillaje social", 1800],
+      ["Maquillaje noche", 2100],
+      ["Maquillaje novia (prueba)", 3000],
+      ["Maquillaje novia (evento)", 3800],
+      ["Pestañas postizas", 600],
+    ],
+  },
+  {
+    nombre: "Paquetes y combos",
+    items: [
+      ["Color + corte + brushing", 3400],
+      ["Mechas + tonalización + secado", 4300],
+      ["Corte caballero + barba", 1100],
+      ["Manicura + pedicura", 1550],
+      ["Novia (peinado + maquillaje)", 7000],
+      ["Quinceañera (peinado + maquillaje)", 5200],
+    ],
+  },
+];
 
 // Datos de la peluquería del usuario autenticado
 app.get("/api/peluqueria", authOptional, requireAuth, requireTenant, async (req, res) => {
@@ -228,6 +393,97 @@ app.post("/api/super/usuarios", authOptional, requireAuth, requireSuperadmin, as
   }
 });
 
+const PUBLICACION_TIPOS = new Set(["novedad", "aviso", "promocion", "evento", "general"]);
+const PUBLICACION_IMAGEN_MAX = 2_200_000;
+
+function normalizeTipoPublicacion(t) {
+  const s = String(t || "general")
+    .toLowerCase()
+    .trim();
+  return PUBLICACION_TIPOS.has(s) ? s : "general";
+}
+
+app.get("/api/publicaciones-globales", authOptional, requireAuth, requireTenant, async (_, res) => {
+  try {
+    const rows = await prisma.publicacionGlobal.findMany({ orderBy: { createdAt: "desc" } });
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        titulo: r.titulo,
+        subtitulo: r.subtitulo,
+        tipo: r.tipo,
+        imagenUrl: r.imagenUrl,
+        createdAt: r.createdAt,
+      })),
+    );
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+app.get("/api/super/publicaciones", authOptional, requireAuth, requireSuperadmin, async (_, res) => {
+  try {
+    const rows = await prisma.publicacionGlobal.findMany({ orderBy: { createdAt: "desc" } });
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        titulo: r.titulo,
+        subtitulo: r.subtitulo,
+        tipo: r.tipo,
+        imagenUrl: r.imagenUrl,
+        createdAt: r.createdAt,
+      })),
+    );
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+app.post("/api/super/publicaciones", authOptional, requireAuth, requireSuperadmin, async (req, res) => {
+  try {
+    const { titulo, subtitulo, tipo, imagenUrl } = req.body;
+    if (!titulo?.trim()) return res.status(400).json({ error: "El título es obligatorio." });
+    const img = imagenUrl != null ? String(imagenUrl).trim() : "";
+    if (!img) return res.status(400).json({ error: "La imagen es obligatoria (subida o URL)." });
+    if (img.length > PUBLICACION_IMAGEN_MAX) {
+      return res.status(400).json({ error: "La imagen es demasiado grande. Use una más pequeña o comprímala." });
+    }
+    const row = await prisma.publicacionGlobal.create({
+      data: {
+        titulo: titulo.trim(),
+        subtitulo: subtitulo?.trim() || null,
+        tipo: normalizeTipoPublicacion(tipo),
+        imagenUrl: img,
+      },
+    });
+    res.status(201).json({
+      id: row.id,
+      titulo: row.titulo,
+      subtitulo: row.subtitulo,
+      tipo: row.tipo,
+      imagenUrl: row.imagenUrl,
+      createdAt: row.createdAt,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+app.delete("/api/super/publicaciones/:id", authOptional, requireAuth, requireSuperadmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await prisma.publicacionGlobal.delete({ where: { id } });
+    res.status(204).end();
+  } catch (e) {
+    if (e.code === "P2025") return res.status(404).json({ error: "Publicación no encontrada." });
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
 app.use("/api/proveedores", authOptional, requireAuth, requireTenant);
 app.use("/api/productos", authOptional, requireAuth, requireTenant);
 app.use("/api/ventas", authOptional, requireAuth, requireTenant);
@@ -235,6 +491,7 @@ app.use("/api/informes", authOptional, requireAuth, requireTenant);
 app.use("/api/salon-categorias", authOptional, requireAuth, requireTenant);
 app.use("/api/salon-categoria-items", authOptional, requireAuth, requireTenant);
 app.use("/api/clientes", authOptional, requireAuth, requireTenant);
+app.use("/api/turnos", authOptional, requireAuth, requireTenant);
 
 const tw = (req) => ({ idPeluqueria: tenantIdFromUser(req.user) });
 
@@ -590,6 +847,58 @@ app.get("/api/salon-categorias", async (req, res) => {
   }
 });
 
+app.post("/api/salon-categorias/bootstrap-uy", async (req, res) => {
+  try {
+    const idP = tenantIdFromUser(req.user);
+    const created = { categorias: 0, items: 0 };
+
+    for (let i = 0; i < CATALOGO_BASE_UY.length; i += 1) {
+      const categoriaDef = CATALOGO_BASE_UY[i];
+      let cat = await prisma.salonCategoria.findFirst({
+        where: { idPeluqueria: idP, nombre: categoriaDef.nombre },
+      });
+      if (!cat) {
+        cat = await prisma.salonCategoria.create({
+          data: { idPeluqueria: idP, nombre: categoriaDef.nombre, orden: i },
+        });
+        created.categorias += 1;
+      }
+
+      for (const [nombre, precio] of categoriaDef.items) {
+        const existe = await prisma.salonCategoriaItem.findFirst({
+          where: { idPeluqueria: idP, idCategoria: cat.id, tipo: "servicio", nombre },
+          select: { id: true },
+        });
+        if (!existe) {
+          await prisma.salonCategoriaItem.create({
+            data: {
+              idPeluqueria: idP,
+              idCategoria: cat.id,
+              tipo: "servicio",
+              nombre,
+              precio,
+              idProducto: null,
+            },
+          });
+          created.items += 1;
+        }
+      }
+    }
+
+    res.json({
+      ok: true,
+      created,
+      message:
+        created.categorias === 0 && created.items === 0
+          ? "El catálogo base ya estaba cargado."
+          : `Catálogo base cargado. Categorías nuevas: ${created.categorias}. Servicios nuevos: ${created.items}.`,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
 app.post("/api/salon-categorias", async (req, res) => {
   try {
     const idP = tenantIdFromUser(req.user);
@@ -711,6 +1020,103 @@ app.delete("/api/salon-categoria-items/:id", async (req, res) => {
     if (!row) return res.status(404).json({ error: "Ítem no encontrado." });
     await prisma.salonCategoriaItem.delete({ where: { id } });
     res.status(204).send();
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+app.get("/api/turnos", async (req, res) => {
+  try {
+    const idP = tenantIdFromUser(req.user);
+    const { from, to } = req.query;
+    let where = { idPeluqueria: idP };
+    if (from || to) {
+      const gte = from ? new Date(String(from)) : undefined;
+      const lte = to ? new Date(String(to)) : undefined;
+      where = { ...where, fechaHora: { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) } };
+    }
+    const rows = await prisma.turno.findMany({
+      where,
+      include: {
+        cliente: { select: { id: true, nombre: true, telefono: true } },
+        salonItem: { select: { id: true, nombre: true, precio: true } },
+      },
+      orderBy: [{ fechaHora: "asc" }, { id: "asc" }],
+    });
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+app.post("/api/turnos", async (req, res) => {
+  try {
+    const idP = tenantIdFromUser(req.user);
+    const { idCliente, idSalonItem, fechaHora, notas } = req.body;
+    if (!idCliente || !idSalonItem || !fechaHora) {
+      return res.status(400).json({ error: "Cliente, servicio y fecha/hora son obligatorios." });
+    }
+
+    const cliente = await prisma.cliente.findFirst({ where: { id: Number(idCliente), idPeluqueria: idP } });
+    if (!cliente) return res.status(400).json({ error: "Cliente no válido para esta peluquería." });
+
+    const servicio = await prisma.salonCategoriaItem.findFirst({
+      where: { id: Number(idSalonItem), idPeluqueria: idP, tipo: "servicio" },
+    });
+    if (!servicio) return res.status(400).json({ error: "Servicio no válido para esta peluquería." });
+
+    const when = new Date(String(fechaHora));
+    if (Number.isNaN(when.getTime())) {
+      return res.status(400).json({ error: "Fecha/hora inválida." });
+    }
+
+    const row = await prisma.turno.create({
+      data: {
+        idPeluqueria: idP,
+        idCliente: Number(idCliente),
+        idSalonItem: Number(idSalonItem),
+        fechaHora: when,
+        notas: notas?.trim() || null,
+      },
+      include: {
+        cliente: { select: { id: true, nombre: true, telefono: true } },
+        salonItem: { select: { id: true, nombre: true, precio: true } },
+      },
+    });
+    res.status(201).json(row);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+app.put("/api/turnos/:id", async (req, res) => {
+  try {
+    const idP = tenantIdFromUser(req.user);
+    const id = Number(req.params.id);
+    const row = await prisma.turno.findFirst({ where: { id, idPeluqueria: idP } });
+    if (!row) return res.status(404).json({ error: "Turno no encontrado." });
+
+    const { estado, notas } = req.body;
+    const nextEstado =
+      estado === "pendiente" || estado === "confirmado" || estado === "cancelado" || estado === "realizado"
+        ? estado
+        : row.estado;
+
+    const updated = await prisma.turno.update({
+      where: { id },
+      data: {
+        estado: nextEstado,
+        ...(notas !== undefined ? { notas: notas?.trim() || null } : {}),
+      },
+      include: {
+        cliente: { select: { id: true, nombre: true, telefono: true } },
+        salonItem: { select: { id: true, nombre: true, precio: true } },
+      },
+    });
+    res.json(updated);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e.message) });

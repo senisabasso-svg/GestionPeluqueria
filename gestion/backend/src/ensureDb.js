@@ -1,7 +1,8 @@
 /**
  * SQLite local: prisma/gestionBdPeluqueria.db. En cada arranque ejecuta `prisma db push`
  * para alinear tablas/columnas con schema.prisma (evita BD antigua sin salon_categorias, etc.).
- * Carga backend/.env antes. Si DATABASE_URL no es file:, no hace push aquí.
+ * Carga backend/.env antes. Si DATABASE_URL no es file: (p. ej. PostgreSQL en Railway),
+ * no hace push aquí: aplicá el esquema con `prisma migrate deploy` o `db push` en el pipeline.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";

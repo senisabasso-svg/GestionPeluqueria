@@ -1123,4 +1123,37 @@ app.put("/api/turnos/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`API GestionPeluqueria en http://localhost:${PORT}`));
+/** Credenciales por defecto solo si no existe aún ese email (cambiar en producción). */
+const BOOTSTRAP_SUPERADMIN_EMAIL = "superadmin@gmail.com";
+const BOOTSTRAP_SUPERADMIN_PASSWORD = "cambiar123123";
+
+async function ensureBootstrapSuperadmin() {
+  const email = BOOTSTRAP_SUPERADMIN_EMAIL.trim().toLowerCase();
+  try {
+    const existing = await prisma.usuario.findUnique({ where: { email } });
+    if (existing) {
+      if (existing.rol !== "superadmin") {
+        console.warn(
+          `[Auth] ${email} ya existe con rol "${existing.rol}". No se modifica; use otro email para superadmin o ajuste la BD.`,
+        );
+      }
+      return;
+    }
+    await prisma.usuario.create({
+      data: {
+        email,
+        passwordHash: await bcrypt.hash(BOOTSTRAP_SUPERADMIN_PASSWORD, 10),
+        nombre: "Superadministrador",
+        rol: "superadmin",
+        idPeluqueria: null,
+      },
+    });
+    console.log("[Auth] Superadmin de arranque creado:", email, "(revise la contraseña en producción).");
+  } catch (e) {
+    console.error("[Auth] No se pudo crear superadmin de arranque:", e.message || e);
+  }
+}
+
+ensureBootstrapSuperadmin().then(() => {
+  app.listen(PORT, () => console.log(`API GestionPeluqueria en http://localhost:${PORT}`));
+});

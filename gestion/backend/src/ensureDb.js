@@ -1,8 +1,7 @@
 /**
- * SQLite local: prisma/gestionBdPeluqueria.db. En cada arranque ejecuta `prisma db push`
- * para alinear tablas/columnas con schema.prisma (evita BD antigua sin salon_categorias, etc.).
- * Carga backend/.env antes. Si DATABASE_URL no es file: (p. ej. PostgreSQL en Railway),
- * no hace push aquí: aplicá el esquema con `prisma migrate deploy` o `db push` en el pipeline.
+ * Carga backend/.env y, al arrancar backend, ejecuta `prisma db push`
+ * para crear/actualizar tablas según schema.prisma.
+ * Esto permite iniciar sobre una PostgreSQL vacía sin errores de tablas faltantes.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -36,41 +35,23 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-const SQLITE_FILE = "gestionBdPeluqueria.db";
-const defaultSqliteUrl = `file:./${SQLITE_FILE}`;
-
-function useSqlite() {
-  const u = process.env.DATABASE_URL;
-  return !u || u.startsWith("file:");
-}
-
-function sqliteDbPath() {
-  return join(prismaDir, SQLITE_FILE);
-}
-
-export function ensureLocalSqlite() {
-  if (!useSqlite()) return;
-  if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = defaultSqliteUrl;
+export function ensureDbSchema() {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    throw new Error("[DB] Falta DATABASE_URL. Defínala para conectar y crear/sincronizar tablas.");
   }
-  const dbPath = sqliteDbPath();
-  const existed = existsSync(dbPath);
-  if (!existed) {
-    console.log("[DB] Creando base local", SQLITE_FILE, "(prisma db push)…");
-  } else {
-    console.log("[DB] Sincronizando esquema con schema.prisma (prisma db push)…");
-  }
+  console.log("[DB] Verificando y sincronizando tablas con prisma db push…");
   try {
     execSync("npx prisma db push --skip-generate", {
       cwd: backendRoot,
       stdio: "inherit",
-      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL || defaultSqliteUrl },
+      env: { ...process.env, DATABASE_URL: databaseUrl },
       shell: true,
     });
   } catch (e) {
-    console.error("[DB] Falló prisma db push. En backend/: npm install && npx prisma generate");
+    console.error("[DB] Falló prisma db push. Revise DATABASE_URL y ejecute: npx prisma generate");
     throw e;
   }
 }
 
-ensureLocalSqlite();
+ensureDbSchema();

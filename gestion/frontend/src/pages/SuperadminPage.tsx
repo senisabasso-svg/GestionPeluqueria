@@ -20,10 +20,13 @@ export default function SuperadminPage() {
   const { usuario, logout } = useAuth();
   const [peluquerias, setPeluquerias] = useState<PeluqueriaRow[]>([]);
   const [nombreSalon, setNombreSalon] = useState("");
+  const [logoSalonUrl, setLogoSalonUrl] = useState("");
+  const [logoSalonFileData, setLogoSalonFileData] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [msgUser, setMsgUser] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formEdit, setFormEdit] = useState({ nombre: "", activo: true, logoUrl: "" });
+  const [editLogoFileData, setEditLogoFileData] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formUser, setFormUser] = useState({
     email: "",
@@ -139,11 +142,14 @@ export default function SuperadminPage() {
     setMsg(null);
     if (!nombreSalon.trim()) return;
     try {
+      const logoUrl = (logoSalonFileData || logoSalonUrl.trim()) || null;
       await api("/api/super/peluquerias", {
         method: "POST",
-        body: JSON.stringify({ nombre: nombreSalon.trim() }),
+        body: JSON.stringify({ nombre: nombreSalon.trim(), logoUrl }),
       });
       setNombreSalon("");
+      setLogoSalonUrl("");
+      setLogoSalonFileData(null);
       await load();
       setMsg("Peluquer\u00eda creada. Use el id mostrado para dar de alta usuarios del sal\u00f3n.");
     } catch (e) {
@@ -154,11 +160,13 @@ export default function SuperadminPage() {
   const iniciarEdicion = (t: PeluqueriaRow) => {
     setEditingId(t.id);
     setFormEdit({ nombre: t.nombre, activo: t.activo, logoUrl: t.logoUrl || "" });
+    setEditLogoFileData(null);
   };
 
   const cancelarEdicion = () => {
     setEditingId(null);
     setFormEdit({ nombre: "", activo: true, logoUrl: "" });
+    setEditLogoFileData(null);
   };
 
   const guardarEdicion = async (e: React.FormEvent) => {
@@ -172,7 +180,7 @@ export default function SuperadminPage() {
         body: JSON.stringify({
           nombre: formEdit.nombre.trim(),
           activo: formEdit.activo,
-          logoUrl: formEdit.logoUrl.trim() || null,
+          logoUrl: (editLogoFileData || formEdit.logoUrl.trim()) || null,
         }),
       });
       await load();
@@ -208,6 +216,37 @@ export default function SuperadminPage() {
     } catch (e) {
       setMsgUser(String(e));
     }
+  };
+
+  const onLogoFile = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    options: { target: "create" | "edit" }
+  ) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      setMsg("Seleccione un archivo de imagen (JPG, PNG, WebP…).");
+      return;
+    }
+    if (f.size > MAX_FILE_BYTES) {
+      setMsg("La imagen del logo supera ~1,7 MB. Reduzca tamaño o use una URL.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") return;
+      if (options.target === "create") {
+        setLogoSalonFileData(result);
+        setLogoSalonUrl("");
+      } else {
+        setEditLogoFileData(result);
+        setFormEdit((prev) => ({ ...prev, logoUrl: "" }));
+      }
+      setMsg(null);
+    };
+    reader.readAsDataURL(f);
   };
 
   return (
@@ -341,10 +380,40 @@ export default function SuperadminPage() {
                 required
               />
             </label>
+            <label>
+              Logo — archivo (opcional)
+              <input type="file" accept="image/*" onChange={(e) => onLogoFile(e, { target: "create" })} />
+            </label>
+            <label>
+              O URL del logo (opcional)
+              <input
+                value={logoSalonUrl}
+                onChange={(e) => setLogoSalonUrl(e.target.value)}
+                placeholder="https://… o /logos/salon.png"
+                disabled={Boolean(logoSalonFileData)}
+              />
+            </label>
+            {(logoSalonFileData || logoSalonUrl.trim()) && (
+              <div style={{ marginTop: "0.25rem" }}>
+                <strong>Vista previa logo:</strong>
+                <div style={{ marginTop: "0.25rem" }}>
+                  <img
+                    src={logoSalonFileData || logoSalonUrl.trim()}
+                    alt="Logo nuevo salón"
+                    style={{ maxWidth: 80, maxHeight: 80, objectFit: "contain", border: "1px solid #ddd", borderRadius: 4 }}
+                  />
+                </div>
+              </div>
+            )}
             <div className="form-actions">
               <button type="submit" className="btn btn-primary">
                 Dar de alta peluquería
               </button>
+              {logoSalonFileData ? (
+                <button type="button" className="btn btn-secondary" onClick={() => setLogoSalonFileData(null)}>
+                  Quitar archivo
+                </button>
+              ) : null}
             </div>
           </form>
           {msg && <p className={msg.includes("creada") || msg.includes("actualizada") ? "ok" : "err"}>{msg}</p>}
@@ -388,7 +457,12 @@ export default function SuperadminPage() {
                                 value={formEdit.logoUrl}
                                 onChange={(e) => setFormEdit((f) => ({ ...f, logoUrl: e.target.value }))}
                                 placeholder="/logos/salon.png"
+                                disabled={Boolean(editLogoFileData)}
                               />
+                            </label>
+                            <label>
+                              O subir archivo de logo
+                              <input type="file" accept="image/*" onChange={(e) => onLogoFile(e, { target: "edit" })} />
                             </label>
                             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                               <input
@@ -398,12 +472,12 @@ export default function SuperadminPage() {
                               />
                               Salón activo
                             </label>
-                            {formEdit.logoUrl && (
+                            {(editLogoFileData || formEdit.logoUrl) && (
                               <div style={{ marginTop: "0.5rem" }}>
                                 <strong>Vista previa:</strong>
                                 <div style={{ marginTop: "0.25rem" }}>
                                   <img
-                                    src={formEdit.logoUrl}
+                                    src={editLogoFileData || formEdit.logoUrl}
                                     alt="Logo"
                                     style={{ maxWidth: 80, maxHeight: 80, objectFit: "contain", border: "1px solid #ddd", borderRadius: 4 }}
                                     onError={(e) => {
@@ -417,6 +491,11 @@ export default function SuperadminPage() {
                               <button type="submit" className="btn btn-primary" disabled={saving}>
                                 {saving ? "Guardando..." : "Guardar"}
                               </button>
+                              {editLogoFileData ? (
+                                <button type="button" className="btn btn-secondary" onClick={() => setEditLogoFileData(null)} disabled={saving}>
+                                  Quitar archivo
+                                </button>
+                              ) : null}
                               <button type="button" className="btn btn-secondary" onClick={cancelarEdicion} disabled={saving}>
                                 Cancelar
                               </button>

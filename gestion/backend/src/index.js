@@ -333,9 +333,11 @@ app.get("/api/super/peluquerias", authOptional, requireAuth, requireSuperadmin, 
 
 app.post("/api/super/peluquerias", authOptional, requireAuth, requireSuperadmin, async (req, res) => {
   try {
-    const { nombre } = req.body;
+    const { nombre, logoUrl } = req.body;
     if (!nombre?.trim()) return res.status(400).json({ error: "El nombre de la peluquería es obligatorio." });
-    const row = await prisma.peluqueria.create({ data: { nombre: nombre.trim(), activo: true } });
+    const row = await prisma.peluqueria.create({
+      data: { nombre: nombre.trim(), activo: true, logoUrl: logoUrl?.trim() || null },
+    });
     res.status(201).json(row);
   } catch (e) {
     console.error(e);

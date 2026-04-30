@@ -199,6 +199,10 @@ function CategoriaBlock({
   const [nombreItem, setNombreItem] = useState("");
   const [precioItem, setPrecioItem] = useState("");
   const [idProdSel, setIdProdSel] = useState("");
+  const [editItemId, setEditItemId] = useState<number | null>(null);
+  const [editItemNombre, setEditItemNombre] = useState("");
+  const [editItemPrecio, setEditItemPrecio] = useState("");
+  const [editItemProdId, setEditItemProdId] = useState("");
 
   const agregarItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,6 +248,47 @@ function CategoriaBlock({
   };
 
   const prodsDisponibles = productos.filter((p) => p.estado === "disponible");
+
+  const iniciarEdicionItem = (it: SalonItem) => {
+    setEditItemId(it.id);
+    setEditItemNombre(it.nombre);
+    setEditItemPrecio(String(it.precio));
+    setEditItemProdId(it.idProducto != null ? String(it.idProducto) : "");
+  };
+
+  const cancelarEdicionItem = () => {
+    setEditItemId(null);
+    setEditItemNombre("");
+    setEditItemPrecio("");
+    setEditItemProdId("");
+  };
+
+  const guardarEdicionItem = async (it: SalonItem) => {
+    onMsg(null);
+    if (!editItemNombre.trim() || editItemPrecio === "") {
+      onMsg("Nombre y precio del ítem son obligatorios.");
+      return;
+    }
+    if (it.tipo === "producto" && !editItemProdId) {
+      onMsg("Elija un producto de inventario.");
+      return;
+    }
+    try {
+      await api(`/api/salon-categoria-items/${it.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          nombre: editItemNombre.trim(),
+          precio: Number(editItemPrecio),
+          idProducto: it.tipo === "producto" ? Number(editItemProdId) : null,
+        }),
+      });
+      cancelarEdicionItem();
+      await onReload();
+      onMsg("Ítem actualizado.");
+    } catch (e) {
+      onMsg(String(e));
+    }
+  };
 
   return (
     <section className="card mt-lg" key={cat.id}>
@@ -334,13 +379,62 @@ function CategoriaBlock({
             {cat.items.map((it) => (
               <tr key={it.id}>
                 <td>{it.tipo === "producto" ? "Producto" : "Servicio"}</td>
-                <td>{it.nombre}</td>
-                <td>${it.precio.toFixed(2)}</td>
-                <td>{it.idProducto != null ? `#${it.idProducto}` : EM}</td>
                 <td>
-                  <button type="button" className="btn btn-ghost" onClick={() => borrarItem(it.id)}>
-                    Quitar
-                  </button>
+                  {editItemId === it.id ? (
+                    <input value={editItemNombre} onChange={(e) => setEditItemNombre(e.target.value)} />
+                  ) : (
+                    it.nombre
+                  )}
+                </td>
+                <td>
+                  {editItemId === it.id ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editItemPrecio}
+                      onChange={(e) => setEditItemPrecio(e.target.value)}
+                    />
+                  ) : (
+                    `$${it.precio.toFixed(2)}`
+                  )}
+                </td>
+                <td>
+                  {editItemId === it.id && it.tipo === "producto" ? (
+                    <select value={editItemProdId} onChange={(e) => setEditItemProdId(e.target.value)} required>
+                      <option value="">{EM} Elegir producto</option>
+                      {prodsDisponibles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          #{p.id} — {p.descripcion} (${p.precioVenta.toFixed(2)})
+                        </option>
+                      ))}
+                    </select>
+                  ) : it.idProducto != null ? (
+                    `#${it.idProducto}`
+                  ) : (
+                    EM
+                  )}
+                </td>
+                <td>
+                  {editItemId === it.id ? (
+                    <div className="form-actions" style={{ justifyContent: "flex-end" }}>
+                      <button type="button" className="btn btn-primary" onClick={() => guardarEdicionItem(it)}>
+                        Guardar
+                      </button>
+                      <button type="button" className="btn btn-secondary" onClick={cancelarEdicionItem}>
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="form-actions" style={{ justifyContent: "flex-end" }}>
+                      <button type="button" className="btn btn-ghost" onClick={() => iniciarEdicionItem(it)}>
+                        Editar
+                      </button>
+                      <button type="button" className="btn btn-ghost" onClick={() => borrarItem(it.id)}>
+                        Quitar
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

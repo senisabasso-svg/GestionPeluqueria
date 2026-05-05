@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
-import LoginIntroOverlay, { shouldSkipLoginIntro } from "../components/LoginIntroOverlay";
 import LoginSalonIllustration from "../components/LoginSalonIllustration";
 import LoginGlassParallaxLayers from "../components/LoginGlassParallaxLayers";
 import LoginGlassTilt from "../components/LoginGlassTilt";
@@ -32,7 +31,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [salon, setSalon] = useState<{ id: number; nombre: string; logoUrl?: string } | null>(null);
-  const [introDone, setIntroDone] = useState(shouldSkipLoginIntro);
 
   if (usuario) {
     navigate(usuario.rol === "superadmin" ? "/super" : "/", { replace: true });
@@ -84,21 +82,10 @@ export default function LoginPage() {
   return (
     <div className="login-split-page">
       <LoginGlassParallaxLayers />
-      {!introDone && <LoginIntroOverlay onComplete={() => setIntroDone(true)} />}
 
       <div className="login-split-grid">
         <div className="login-split-left">
           <header className="login-split-brand">
-            {salon?.logoUrl ? (
-              <img src={salon.logoUrl} alt="" className="login-split-brand-logo" width={40} height={40} />
-            ) : (
-              <span className="login-split-brand-mark" aria-hidden>
-                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-                  <rect x="4" y="6" width="24" height="20" rx="3" stroke="currentColor" strokeWidth="2" />
-                  <path d="M10 14h12M10 18h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </span>
-            )}
             <span className="login-split-brand-name">{salonNombre}</span>
           </header>
 
